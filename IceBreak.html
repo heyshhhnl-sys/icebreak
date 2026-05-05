@@ -1,0 +1,1341 @@
+<!DOCTYPE html><html lang="en"><head>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IceBreak — Good conversations start somewhere.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital,wght@0,400;1,400&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#EEEAE4"/>
+  <rect x="100" y="100" width="200" height="200" rx="32" fill="#D4B483" transform="rotate(-6 200 200)"/>
+  <rect x="100" y="100" width="200" height="200" rx="32" fill="#7BA098" transform="rotate(2 200 200)"/>
+  <text x="200" y="215" font-family="serif" font-size="56" font-style="italic" fill="#1A1A1A" text-anchor="middle">Ice</text>
+</svg>
+</template>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx" data-plugins="transform-react-jsx-source,om-src-id,om-text-extract" data-filename="tweaks-panel.jsx"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #EEEAE4; overflow: hidden; }
+  body { font-family: 'DM Sans', sans-serif; color: #1A1A1A; -webkit-font-smoothing: antialiased; }
+  #root { height: 100%; }
+  * { -webkit-tap-highlight-color: transparent; }
+
+  @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp  { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeOut  { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes scaleIn  { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  @keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  ::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-plugins="transform-react-jsx-source,om-src-id,om-text-extract" data-filename="inline-1">
+
+
+
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "appName": "IceBreak",
+  "tagline1": "Good conversations don't happen.",
+  "tagline2": "They start somewhere.",
+  "doodleSize": 240,
+  "doodleOpacity": 100,
+  "cardRadius": 28,
+  "bgColor": "#EEEAE4",
+  "accentColor": "#1A1A1A"
+} /*EDITMODE-END*/;
+
+// ─── Palette ───────────────────────────────────────────────────────────────
+const PALETTE = [
+"#D4B483", "#B8AECF", "#C4909A", "#B5BA8A", "#7BBFB5",
+"#C4A882", "#8FA8C8", "#C49090", "#A8B8C8", "#C8B4A0"];
+
+
+function textColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16),g = parseInt(hex.slice(3, 5), 16),b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#1A1A1A" : "#FAFAFA";
+}
+
+function pickColor(id) {
+  const sum = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  return PALETTE[sum % PALETTE.length];
+}
+
+// ─── Data ──────────────────────────────────────────────────────────────────
+const BASE_CATEGORIES = [
+{
+  id: "tech", label: "Tech Meetup", emoji: "💻", color: "#D4B483",
+  endCopy: "You shipped all 10 cards. Hope the conversation compiles.",
+  questions: [
+  "What's a tool you added to your workflow this year you can't imagine dropping?",
+  "What's a technical decision you made that you later completely reversed?",
+  "What's the most useful piece of code you've written that took under 10 lines?",
+  "What are you building right now that you're actually excited to show someone?",
+  "What are you building right now that you're actually excited to show someone?",
+  "What's something everyone in tech thinks is obvious but took you a long time to get?",
+  "What are you building right now that you're actually excited to show someone?",
+  "What's a problem you've been sitting with for months with no good answer yet?",
+  "If you had a week with no meetings and no Slack, what would you actually work on?",
+  "What's the last thing someone showed you that made you rethink how you do something?"]
+
+},
+{
+  id: "design", label: "Design Meetup", emoji: "🎨", color: "#B8AECF",
+  endCopy: "That's a wrap. If it's still going, that's the best brief you could ask for.",
+  questions: [
+  "What's a design decision you've changed your mind on in the last year?",
+  "What's a constraint that made your work better instead of worse?",
+  "What's a project you're proud of that nobody really noticed?",
+  "What does 'good design' mean to you right now — and has that changed?",
+  "What's a piece of design (anything, not just digital) that you keep coming back to?",
+  "What's the feedback you most dread getting — and why is it usually right?",
+  "When do you actually know something is finished?",
+  "What's a design trend you're watching with skepticism?",
+  "Who made something recently that stopped you mid-scroll?",
+  "What's the last thing you sketched that you haven't shown anyone yet?"]
+
+},
+{
+  id: "friends", label: "Friends Hangout", emoji: "🍕", color: "#C4909A",
+  endCopy: "All cards played. Hopefully at least one got weird.",
+  questions: [
+  "What's something you've been meaning to do for over a year and still haven't?",
+  "What's a phase you went through that you're kind of glad is over?",
+  "What's the best thing that happened to you in the last 30 days?",
+  "What's a small habit that's actually stuck?",
+  "What are you really into right now that would surprise people who know you?",
+  "What's a hill you'd absolutely die on?",
+  "What's something you changed your mind about recently?",
+  "What's the last thing you recommended to someone that they actually loved?",
+  "What do you do when you have a completely free afternoon with no plans?",
+  "What's something about yourself you've only recently figured out?"]
+
+},
+{
+  id: "coworking", label: "Co-working", emoji: "☕", color: "#8FA8C8",
+  endCopy: "Done for now. The best ideas show up when you stop looking.",
+  questions: [
+  "What are you working on right now that you'd describe as actually meaningful?",
+  "What does a genuinely good work day look like for you — not the ideal, the real?",
+  "What's something you've stopped doing at work that made everything better?",
+  "What's a decision you made at work recently that felt uncomfortable but right?",
+  "What's the thing you always say you'll do when you 'have time'?",
+  "Remote or office — where do you actually get your best thinking done?",
+  "What's one thing this space could have that would make you come here more?",
+  "What's the last thing at work that genuinely surprised you?",
+  "What do you do in the first 30 minutes of your day that actually matters?",
+  "What's a professional skill you're building that has nothing to do with your job title?"]
+
+},
+{
+  id: "sustainability", label: "Sustainability", emoji: "🌱", color: "#7BBFB5",
+  endCopy: "All 10 out there. The conversation matters more than the cards.",
+  questions: [
+  "What's a small thing you actually changed in the last year, not just planned to?",
+  "What's the biggest gap between what people think works and what actually does?",
+  "What project are you working on right now that you genuinely believe in?",
+  "Who's doing work in this space that deserves more attention?",
+  "Where do you still find optimism — honestly?",
+  "What's a trade-off in your own life you're still not fully at peace with?",
+  "What's something most people get wrong about your area of work?",
+  "What brought you to this space — and has your reason changed?",
+  "What would success look like in 10 years, in concrete terms?",
+  "What keeps you going on the days when the news is just bad?"]
+
+}];
+
+
+// ─── localStorage helpers ──────────────────────────────────────────────────
+function lsGet(key, fallback) {
+  try {const v = localStorage.getItem(key);return v ? JSON.parse(v) : fallback;}
+  catch {return fallback;}
+}
+function lsSet(key, val) {
+  try {localStorage.setItem(key, JSON.stringify(val));} catch {}
+}
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────
+const QRIcon = () =>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="3" height="3" />
+    <rect x="19" y="14" width="2" height="2" /><rect x="14" y="19" width="2" height="2" />
+    <rect x="18" y="18" width="3" height="3" />
+  </svg>;
+
+
+const ArrowRight = ({ size = 24, color = "#FAFAFA" }) =>
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="11" stroke={color} strokeWidth="1.5" strokeOpacity="0.4" />
+    <path d="M10 8l4 4-4 4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>;
+
+
+const WhatsAppIcon = () =>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>;
+
+
+const StarIcon = ({ filled = false, color = "#0A0A0A" }) =>
+<svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>;
+
+
+const CloseIcon = ({ size = 20, color = "#FAFAFA" }) =>
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>;
+
+
+const CopyIcon = () =>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+  </svg>;
+
+
+// ─── Illustrations ────────────────────────────────────────────────────────
+const LandingPeep = ({ size = 220, opacity = 100 }) =>
+<img
+  src="doodle.png"
+  alt="IceBreak doodle character"
+  style={{
+    width: size,
+    maxWidth: '80vw',
+    height: 'auto',
+    opacity: opacity / 100,
+    filter: 'none',
+    display: 'block',
+    margin: '0 auto',
+    alignSelf: 'center'
+  }} />;
+
+
+
+const EndPeep = ({ size = 180, opacity = 100 }) =>
+<img
+  src="doodle.png"
+  alt="IceBreak doodle character"
+  style={{
+    width: size,
+    height: 'auto',
+    opacity: opacity / 100,
+    filter: 'none',
+    transform: 'scaleX(-1)',
+    display: 'block'
+  }} />;
+
+
+
+
+// ─── QR Code generator (pure SVG) ─────────────────────────────────────────
+function generateQRMatrix(text) {
+  // Simple visual QR placeholder — a real QR grid for the URL
+  // We'll use a deterministic pattern based on the URL
+  const size = 21;
+  const matrix = Array.from({ length: size }, () => Array(size).fill(0));
+  // Finder patterns
+  const finder = (r, c) => {
+    for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) {
+      if (i === 0 || i === 6 || j === 0 || j === 6 || i >= 2 && i <= 4 && j >= 2 && j <= 4) matrix[r + i][c + j] = 1;
+    }
+  };
+  finder(0, 0);finder(0, 14);finder(14, 0);
+  // Timing patterns
+  for (let i = 8; i < 13; i++) {matrix[6][i] = i % 2 === 0 ? 1 : 0;matrix[i][6] = i % 2 === 0 ? 1 : 0;}
+  // Data fill with hash of text
+  let hash = 0;for (let i = 0; i < text.length; i++) hash = hash * 31 + text.charCodeAt(i) >>> 0;
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+    if (!matrix[r][c] && !(r < 8 && c < 8) && !(r < 8 && c > 12) && !(r > 12 && c < 8))
+    matrix[r][c] = (hash ^ r * 17 + c * 13 ^ (r ^ c)) & 1;
+  }
+  return matrix;
+}
+
+function QRCodeSVG({ url, size = 160 }) {
+  const matrix = generateQRMatrix(url);
+  const n = matrix.length;
+  const cell = size / n;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <rect width={size} height={size} fill="white" rx="8" />
+      {matrix.map((row, r) => row.map((v, c) => v ?
+      <rect key={`${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0A0A0A" /> :
+      null))}
+    </svg>);
+
+}
+
+// ─── Progress Dots ─────────────────────────────────────────────────────────
+function ProgressDots({ total, current, tc }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      {Array.from({ length: total }).map((_, i) =>
+      <div key={i} style={{
+        width: i === current ? 22 : 7,
+        height: 7,
+        borderRadius: 4,
+        background: tc,
+        opacity: i === current ? 1 : 0.25,
+        transition: 'width 0.3s ease'
+      }} />
+      )}
+    </div>);
+
+}
+
+// ─── Card Component ────────────────────────────────────────────────────────
+function Card({ question, cardColor, index, total, isFaved, onFave, onNext, onDefer, isTop, showTooltip }) {
+  const tc = textColor(cardColor);
+  const cardRef = useRef(null);
+  const startXRef = useRef(null);
+  const startYRef = useRef(null);
+  const currDxRef = useRef(0);
+  const animatingRef = useRef(false);
+  const [tooltipVisible, setTooltipVisible] = useState(showTooltip);
+
+  useEffect(() => {setTooltipVisible(showTooltip);}, [showTooltip]);
+
+  const ql = question.length;
+  const qFontSize = ql < 50 ? 30 : ql < 70 ? 25 : 21;
+
+  const resetCard = () => {
+    if (!cardRef.current) return;
+    cardRef.current.style.transition = 'transform 0.5s cubic-bezier(.34,1.56,.64,1), opacity 0.5s ease';
+    cardRef.current.style.transform = 'translateX(0) rotate(0deg)';
+    cardRef.current.style.opacity = '1';
+    currDxRef.current = 0;
+  };
+
+  const animateOut = (dir, cb) => {
+    if (!cardRef.current || animatingRef.current) return;
+    animatingRef.current = true;
+    const tx = dir > 0 ? '140vw' : '-140vw';
+    const rot = dir > 0 ? '22deg' : '-22deg';
+    cardRef.current.style.transition = 'transform 0.4s cubic-bezier(.25,.46,.45,.94), opacity 0.3s ease';
+    cardRef.current.style.transform = `translateX(${tx}) rotate(${rot})`;
+    cardRef.current.style.opacity = '0';
+    setTimeout(() => {animatingRef.current = false;cb();}, 380);
+  };
+
+  const onPointerDown = (e) => {
+    if (!isTop) return;
+    startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
+    currDxRef.current = 0;
+    if (cardRef.current) cardRef.current.style.transition = 'none';
+  };
+
+  const onPointerMove = (e) => {
+    if (startXRef.current === null) return;
+    const dx = e.clientX - startXRef.current;
+    const dy = e.clientY - startYRef.current;
+    if (Math.abs(dy) > Math.abs(dx) + 10) return; // vertical scroll
+    currDxRef.current = dx;
+    const rot = dx * 0.07;
+    const opacity = Math.max(0.4, 1 - Math.abs(dx) / 300);
+    if (cardRef.current) {
+      cardRef.current.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
+      cardRef.current.style.opacity = opacity;
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (startXRef.current === null) return;
+    const dx = currDxRef.current;
+    startXRef.current = null;
+    if (Math.abs(dx) > 75) {
+      if (dx > 0) animateOut(1, onNext);else
+      animateOut(-1, onDefer);
+    } else {
+      resetCard();
+    }
+  };
+
+  const onClick = (e) => {
+    if (Math.abs(currDxRef.current) < 8 && isTop) {
+      animateOut(1, onNext);
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
+      onClick={onClick}
+      style={{
+        position: 'absolute',
+        width: '92vw',
+        maxWidth: 400,
+        minHeight: 510,
+        borderRadius: 'var(--card-radius, 28px)',
+        background: cardColor,
+        padding: '28px 26px 26px',
+        boxShadow: '0 28px 70px rgba(0,0,0,0.45)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        cursor: isTop ? 'grab' : 'default',
+        userSelect: 'none',
+        touchAction: 'none',
+        zIndex: isTop ? 10 : 5 - index,
+        transform: !isTop ?
+        index === 1 ? 'translateY(10px) rotate(1.8deg) scale(0.965)' :
+        'translateY(20px) rotate(3.6deg) scale(0.93)' :
+        'translateX(0) rotate(0deg)',
+        transition: !isTop ? 'transform 0.3s ease' : undefined
+      }}>
+      
+      {/* Top row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <ProgressDots total={total} current={index} tc={tc} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: 'DM Sans', fontWeight: 500, color: tc, opacity: 0.6, fontSize: "14px" }}>{index + 1} of {total}</span>
+          <button
+            onClick={(e) => {e.stopPropagation();onFave();}}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 10px',
+              borderRadius: 20,
+              border: `1.5px solid ${isFaved ? tc : tc + '55'}`,
+              background: isFaved ? tc + '33' : tc + '18',
+              cursor: 'pointer',
+
+              fontFamily: 'DM Sans',
+              fontWeight: 600,
+              color: tc,
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap', fontSize: "16px"
+            }}>
+            
+            <StarIcon filled={isFaved} color={tc} />
+            {isFaved ? 'Saved' : 'Saved'}
+          </button>
+        </div>
+      </div>
+
+      {/* Question */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '24px 0', fontFamily: "\"DM Sans\"" }}>
+        <p style={{ ...{
+            fontFamily: 'DM Sans',
+            fontSize: qFontSize,
+            lineHeight: 1.38,
+            color: tc,
+            textWrap: 'pretty'
+          }, fontFamily: 'DM Sans', fontSize: "22px" }}>{question}</p>
+      </div>
+
+      {/* Bottom row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        {tooltipVisible && isTop ?
+        <span style={{
+          fontSize: 12, fontFamily: 'DM Sans', color: tc, opacity: 0.7,
+          animation: 'fadeOut 0.5s ease 3.5s forwards'
+        }}>← come back &nbsp;·&nbsp; next →</span> :
+
+        <span style={{ fontSize: 12, fontFamily: 'DM Sans', color: tc, opacity: 0.28 }}>swipe or tap</span>
+        }
+        <button
+          onClick={(e) => {e.stopPropagation();if (isTop) animateOut(1, onNext);}}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: 4, lineHeight: 0, color: tc
+          }}>
+          
+          <ArrowRight size={36} color={tc} />
+        </button>
+      </div>
+    </div>);
+
+}
+
+// ─── Category Pill ─────────────────────────────────────────────────────────
+function CategoryPill({ cat, isActive, onClick }) {
+  const bg = isActive ? cat.color : '#E0DAD2';
+  const col = isActive ? textColor(cat.color) : '#1A1A1A';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 16px',
+        borderRadius: 50,
+        border: isActive ? 'none' : '1px solid #CCC8C0',
+        background: bg,
+        color: col,
+        fontFamily: 'DM Sans',
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'all 0.2s ease',
+        flexShrink: 0
+      }}>
+      
+      <span>{cat.emoji}</span>
+      <span>{cat.label}</span>
+    </button>);
+
+}
+
+// ─── Create Category Modal ─────────────────────────────────────────────────
+function CreateModal({ onClose, onCreate }) {
+  const [step, setStep] = useState(1); // 1=input, 2=loading, 3=preview
+  const [topic, setTopic] = useState('');
+  const [questions, setQuestions] = useState([]);
+  const [catName, setCatName] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+
+  const quickTopics = ['startup', 'travel', 'music', 'food', 'wellness', 'parenting', 'books', 'sport', 'cinema', 'gaming'];
+
+  useEffect(() => {if (step === 1 && inputRef.current) inputRef.current.focus();}, [step]);
+
+  const generate = async (t) => {
+    const trimmed = (t || topic).trim();
+    if (!trimmed) return;
+    setStep(2);
+    setError('');
+    try {
+      const text = await window.claude.complete({
+        messages: [{
+          role: 'user',
+          content: `Generate exactly 10 icebreaker questions for a meetup or social gathering with the topic: "${trimmed}".
+
+Rules:
+- Each question should be specific to the topic, not generic
+- Questions should spark real conversation, not have obvious answers
+- Keep each question under 15 words
+- No numbering, no bullet points
+- Return ONLY a JSON array of 10 strings, nothing else
+- Example format: ["Question 1?","Question 2?",...]`
+        }]
+      });
+      const clean = text.replace(/```json|```/g, '').trim();
+      const qs = JSON.parse(clean);
+      setQuestions(qs);
+      setCatName(trimmed.charAt(0).toUpperCase() + trimmed.slice(1));
+      setStep(3);
+    } catch (e) {
+      setError('Could not generate questions. Try again.');
+      setStep(1);
+    }
+  };
+
+  const handleCreate = () => {
+    const color = pickColor(catName + Date.now());
+    const newCat = {
+      id: 'custom_' + Date.now(),
+      label: catName,
+      emoji: '✨',
+      color,
+      endCopy: `That's all the ${catName} cards. Hope it sparked something.`,
+      questions: [...questions].sort(() => Math.random() - 0.5),
+      isCustom: true
+    };
+    onCreate(newCat);
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'flex-end'
+    }}
+    onClick={(e) => {if (e.target === e.currentTarget) onClose();}}>
+      
+      <div style={{
+        width: '100%',
+        background: '#F5F1EB',
+        borderRadius: '28px 28px 0 0',
+        padding: '28px 24px 40px',
+        animation: 'slideUpSheet 0.35s cubic-bezier(.25,.46,.45,.94)',
+        maxHeight: '85vh',
+        overflow: 'auto'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span style={{ fontFamily: 'DM Serif Display', fontSize: 22, color: 'rgb(42, 42, 42)' }}>
+            {step === 1 ? "What's the topic?" : step === 2 ? 'Creating...' : 'Preview'}
+          </span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <CloseIcon />
+          </button>
+        </div>
+
+        {step === 1 &&
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#888', marginBottom: 20 }}>
+              Type any topic — AI will create 10 tailored icebreaker questions for you.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              <input
+              ref={inputRef}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && generate()}
+              placeholder="e.g. remote work, hiking..."
+              style={{
+                flex: 1, padding: '12px 16px', borderRadius: 14,
+                border: '1px solid #D8D2C8', background: '#F0EBE3',
+                color: '#1A1A1A', fontFamily: 'DM Sans', fontSize: 15,
+                outline: 'none'
+              }} />
+            
+              <button
+              onClick={() => generate()}
+              disabled={!topic.trim()}
+              style={{
+                padding: '12px 18px', borderRadius: 14, border: 'none',
+                background: topic.trim() ? '#FAFAFA' : '#2A2A2A',
+                color: topic.trim() ? '#0A0A0A' : '#555',
+                fontFamily: 'DM Sans', fontWeight: 700, fontSize: 16,
+                cursor: topic.trim() ? 'pointer' : 'default',
+                transition: 'all 0.2s'
+              }}>
+              →</button>
+            </div>
+            {error && <p style={{ color: '#E87878', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {quickTopics.map((t) =>
+            <button key={t} onClick={() => {setTopic(t);generate(t);}}
+            style={{
+              padding: '6px 14px', borderRadius: 20,
+              border: '1px solid #CCC8C0', background: 'transparent',
+              color: '#888', fontFamily: 'DM Sans', fontSize: 13,
+              cursor: 'pointer'
+            }}>
+              {t}</button>
+            )}
+            </div>
+          </div>
+        }
+
+        {step === 2 &&
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: 20, animation: 'fadeIn 0.3s ease' }}>
+            <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            border: '3px solid #D8D2C8', borderTopColor: '#1A1A1A',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+            <p style={{ fontFamily: 'DM Sans', fontSize: 15, color: '#888' }}>
+              Creating questions about "{topic}"...
+            </p>
+          </div>
+        }
+
+        {step === 3 &&
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <input
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
+            style={{
+              width: '100%', padding: '12px 16px', borderRadius: 14,
+              border: '1px solid #D8D2C8', background: '#F0EBE3',
+              color: '#1A1A1A', fontFamily: 'DM Serif Display', fontSize: 20,
+              outline: 'none', marginBottom: 12
+            }} />
+          
+            <p style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#555', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              10 AI-generated questions
+            </p>
+            <div style={{
+            maxHeight: 200, overflowY: 'auto',
+            display: 'flex', flexDirection: 'column', gap: 8,
+            marginBottom: 24
+          }}>
+              {questions.map((q, i) =>
+            <div key={i} style={{
+              padding: '10px 14px', borderRadius: 12,
+              background: '#EDE8E1', border: '1px solid #D8D2C8',
+              fontFamily: 'DM Sans', fontSize: 14, color: '#1A1A1A', lineHeight: 1.4
+            }}>
+                  {q}
+                </div>
+            )}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => {setStep(1);setTopic('');}}
+            style={{
+              flex: 1, padding: '13px', borderRadius: 14,
+              border: '1px solid #CCC8C0', background: 'transparent',
+              color: '#888', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 15,
+              cursor: 'pointer'
+            }}>
+              ← Retry</button>
+              <button onClick={handleCreate}
+            style={{
+              flex: 2, padding: '13px', borderRadius: 14,
+              border: 'none', background: '#1A1A1A',
+              color: '#FAFAFA', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 15,
+              cursor: 'pointer'
+            }}>
+              Create ✨</button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>);
+
+}
+
+// ─── QR Modal ─────────────────────────────────────────────────────────────
+function QRModal({ onClose }) {
+  const url = window.location.href;
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.8)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      animation: 'fadeIn 0.2s ease'
+    }}
+    onClick={(e) => {if (e.target === e.currentTarget) onClose();}}>
+      
+      <div style={{
+        background: '#F5F1EB',
+        borderRadius: 24,
+        padding: '32px 28px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+        animation: 'scaleIn 0.25s ease',
+        position: 'relative'
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 12, right: 12,
+          background: 'none', border: 'none', cursor: 'pointer'
+        }}>
+          <CloseIcon size={18} color="#555" />
+        </button>
+        <p style={{ fontFamily: 'DM Sans', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#555' }}>
+          SCAN TO OPEN ICEBREAK
+        </p>
+        <QRCodeSVG url={url} size={160} />
+        <p style={{ fontFamily: 'DM Serif Display', fontSize: 22, color: '#FAFAFA' }}>IceBreak</p>
+      </div>
+    </div>);
+
+}
+
+// ─── Coming Soon Toast ─────────────────────────────────────────────────────
+function ComingSoonToast({ message, url, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copyLink = () => {
+    try {navigator.clipboard.writeText(url);} catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'flex-end',
+      animation: 'fadeIn 0.2s ease'
+    }} onClick={(e) => {if (e.target === e.currentTarget) onClose();}}>
+      <div style={{
+        width: '100%',
+        background: '#F5F1EB',
+        borderRadius: '24px 24px 0 0',
+        padding: '28px 24px 40px',
+        animation: 'slideUpSheet 0.3s cubic-bezier(.25,.46,.45,.94)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <p style={{ fontFamily: 'DM Serif Display', fontSize: 22, color: '#FAFAFA', marginBottom: 8 }}>
+              🚧 Coming soon
+            </p>
+            <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#888', lineHeight: 1.5, maxWidth: 280 }}>
+              {message}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', fontSize: 20, padding: 4 }}>✕</button>
+        </div>
+        <p style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+          In the meantime, share this link:
+        </p>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#EDE8E1', borderRadius: 14,
+          border: '1px solid #D8D2C8',
+          padding: '10px 14px',
+          marginBottom: 14
+        }}>
+          <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#777', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>
+          <button onClick={copyLink} style={{
+            padding: '6px 14px', borderRadius: 10,
+            border: 'none', background: copied ? '#D0CAC0' : '#1A1A1A',
+            color: copied ? '#888' : '#FAFAFA',
+            fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+            transition: 'all 0.2s'
+          }}>
+            {copied ? 'Copied ✓' : 'Copy'}
+          </button>
+        </div>
+      </div>
+    </div>);
+
+}
+
+// ─── Bottom Action Bar ─────────────────────────────────────────────────────
+function BottomBar({ onWA, onQRBar, pageUrl }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = () => {
+    try {navigator.clipboard.writeText(pageUrl);} catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{
+      display: 'flex', gap: 10, justifyContent: 'center',
+      padding: '12px 24px 0',
+      flexShrink: 0
+    }}>
+      <button onClick={copyLink} style={{
+        display: 'flex', alignItems: 'center', gap: 7,
+        padding: '10px 18px',
+        borderRadius: 50,
+        border: '1px solid #CCC8C0', background: '#E0DAD2',
+        color: copied ? '#999' : '#1A1A1A',
+        fontFamily: 'DM Sans', fontSize: 14, fontWeight: 600,
+        cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+        transition: 'color 0.2s'
+      }}>
+        <CopyIcon /> {copied ? 'Copied ✓' : 'SHARE THE APP WITH FRIENDS'}
+      </button>
+    </div>);
+
+}
+// ─── Card Stack View ───────────────────────────────────────────────────────
+function CardStack({ category, favs, onFaveToggle, onEnd }) {
+  const [deck, setDeck] = useState(() => [...category.questions]);
+  const [seen, setSeen] = useState(0);
+  const [showTooltip, setShowTooltip] = useState(true);
+  const total = category.questions.length;
+
+  // Re-init when category changes
+  const prevCatId = useRef(category.id);
+  useEffect(() => {
+    if (prevCatId.current !== category.id) {
+      prevCatId.current = category.id;
+      setDeck([...category.questions]);
+      setSeen(0);
+      setShowTooltip(true);
+    }
+  }, [category]);
+
+  const handleNext = () => {
+    setShowTooltip(false);
+    setDeck((d) => {
+      const nd = d.slice(1);
+      const ns = seen + 1;
+      setSeen(ns);
+      if (ns >= total) {setTimeout(onEnd, 100);}
+      return nd;
+    });
+  };
+
+  const handleDefer = () => {
+    setShowTooltip(false);
+    setDeck((d) => {
+      if (d.length <= 1) return d;
+      const [first, ...rest] = d;
+      return [...rest, first];
+    });
+  };
+
+  if (deck.length === 0) return null;
+
+  // Favs empty state
+  if (category.isFavs && category.questions.length === 0) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 12,
+        width: '92vw', maxWidth: 400,
+        minHeight: 510,
+        borderRadius: 28,
+        border: '1px dashed #CCC8C0',
+        textAlign: 'center', padding: 32
+      }}>
+        <span style={{ fontSize: 32 }}>⭐</span>
+        <p style={{ fontFamily: 'DM Serif Display', fontSize: 22, color: '#1A1A1A', lineHeight: 1.4 }}>
+          No favorites yet.
+        </p>
+        <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#555' }}>
+          Save cards as you go ★
+        </p>
+      </div>);
+
+  }
+
+  const visibleCards = deck.slice(0, 3);
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: '92vw', maxWidth: 400,
+      height: 530,
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      {[...visibleCards].reverse().map((q, ri) => {
+        const i = visibleCards.length - 1 - ri;
+        const isTop = i === 0;
+        const cardIndex = category.questions.indexOf(q);
+        const absoluteIndex = seen + i;
+        return (
+          <Card
+            key={q}
+            question={q}
+            cardColor={category.color}
+            index={absoluteIndex < total ? absoluteIndex : total - 1}
+            total={total}
+            isFaved={favs.includes(q)}
+            onFave={() => onFaveToggle(q)}
+            onNext={handleNext}
+            onDefer={handleDefer}
+            isTop={isTop}
+            showTooltip={showTooltip && isTop && seen === 0} />);
+
+
+      })}
+    </div>);
+
+}
+
+// ─── End State ─────────────────────────────────────────────────────────────
+function EndState({ category, onShuffle, doodleOpacity = 80 }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: 20, padding: '20px 24px',
+      animation: 'slideUp 0.4s ease',
+      textAlign: 'center'
+    }}>
+      <EndPeep size={180} opacity={doodleOpacity} />
+      <p style={{
+        fontFamily: 'DM Serif Display', fontSize: 26,
+        color: '#1A1A1A', lineHeight: 1.35,
+        maxWidth: 320
+      }}>{category.endCopy}</p>
+      <button onClick={onShuffle} style={{
+        padding: '13px 32px',
+        borderRadius: 50,
+        border: 'none', background: '#1A1A1A',
+        color: '#FAFAFA', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 16,
+        cursor: 'pointer', marginTop: 4
+      }}>
+        Shuffle again
+      </button>
+      <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#555', marginTop: -4 }}>
+        Or try another vibe ↑
+      </p>
+    </div>);
+
+}
+
+// ─── Pills Scroller (with edge-fade indicators) ────────────────────────────
+function PillsScroller({ pillsRef, bgColor, children }) {
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
+
+  const updateFades = useCallback(() => {
+    const el = pillsRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setShowLeft(scrollLeft > 4);
+    setShowRight(scrollLeft + clientWidth < scrollWidth - 4);
+  }, [pillsRef]);
+
+  useEffect(() => {
+    updateFades();
+    const el = pillsRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateFades, { passive: true });
+    window.addEventListener('resize', updateFades);
+    const t1 = setTimeout(updateFades, 50);
+    const t2 = setTimeout(updateFades, 300);
+    return () => {
+      el.removeEventListener('scroll', updateFades);
+      window.removeEventListener('resize', updateFades);
+      clearTimeout(t1); clearTimeout(t2);
+    };
+  }, [updateFades, children]);
+
+  const fadeColor = bgColor || '#EEEAE4';
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <div
+        ref={pillsRef}
+        onScroll={updateFades}
+        style={{
+          display: 'flex', gap: 8,
+          overflowX: 'auto',
+          padding: '0 20px 14px',
+          scrollbarWidth: 'none',
+          scrollSnapType: 'x proximity',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+        {children}
+      </div>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 14,
+        width: 28, pointerEvents: 'none',
+        background: `linear-gradient(to right, ${fadeColor} 0%, ${fadeColor}00 100%)`,
+        opacity: showLeft ? 1 : 0,
+        transition: 'opacity 0.2s ease'
+      }} />
+      <div style={{
+        position: 'absolute', right: 0, top: 0, bottom: 14,
+        width: 36, pointerEvents: 'none',
+        background: `linear-gradient(to left, ${fadeColor} 0%, ${fadeColor}00 100%)`,
+        opacity: showRight ? 1 : 0,
+        transition: 'opacity 0.2s ease',
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        paddingRight: 4
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55 }}>
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+    </div>);
+
+}
+
+// ─── Main App ──────────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  const [favs, setFavs] = useState(() => lsGet('icebreak_favs', []));
+  const [customCats, setCustomCats] = useState(() => lsGet('icebreak_custom', []));
+  const [activeCatId, setActiveCatId] = useState(() => lsGet('icebreak_last_category', null));
+  const [isEnded, setIsEnded] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [showToast, setShowToast] = useState(null); // 'wa' | 'qr' | null
+  const pageUrl = window.location.href;
+  const pillsRef = useRef(null);
+
+  // Build full category list
+  const favsCategory = {
+    id: 'favs', label: 'My Favs', emoji: '⭐', color: '#EDE84A',
+    endCopy: "Those were your picks. Good taste.",
+    questions: favs, isFavs: true
+  };
+
+  const allCats = [
+  ...BASE_CATEGORIES,
+  ...customCats,
+  ...(favs.length > 0 ? [favsCategory] : [])];
+
+
+  const activeCat = allCats.find((c) => c.id === activeCatId) || null;
+
+  // Persist last category
+  useEffect(() => {if (activeCatId) lsSet('icebreak_last_category', activeCatId);}, [activeCatId]);
+
+  // When favs update, sync to favs category
+  const handleFaveToggle = (q) => {
+    setFavs((prev) => {
+      const next = prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q];
+      lsSet('icebreak_favs', next);
+      return next;
+    });
+  };
+
+  const selectCat = (id) => {
+    if (id !== activeCatId) setIsEnded(false);
+    setActiveCatId(id);
+    // Scroll pill into view
+    setTimeout(() => {
+      if (pillsRef.current) {
+        const pill = pillsRef.current.querySelector(`[data-catid="${id}"]`);
+        if (pill) pill.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+      }
+    }, 50);
+  };
+
+  const handleCreate = (newCat) => {
+    const updated = [...customCats, newCat];
+    setCustomCats(updated);
+    lsSet('icebreak_custom', updated);
+    setActiveCatId(newCat.id);
+    setIsEnded(false);
+  };
+
+  const handleShuffle = () => {
+    setIsEnded(false);
+    // Force re-render of card stack by changing a key
+    setActiveCatId((id) => {setTimeout(() => setActiveCatId(id), 50);return null;});
+  };
+
+  return (
+    <div style={{
+      height: '100%',
+      display: 'flex', flexDirection: 'column',
+      background: tweaks.bgColor,
+      overflow: 'hidden',
+      '--card-radius': tweaks.cardRadius + 'px'
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 20px 12px',
+        flexShrink: 0
+      }}>
+        <button onClick={() => {setActiveCatId(null);setIsEnded(false);}} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0 }}>
+          <img src="logo.svg" alt="IceBreak" style={{ height: 14, width: 'auto', display: 'block', filter: 'invert(1)' }} />
+        </button>
+      </div>
+
+      {/* Category pills — only shown when a category is active */}
+      {activeCat &&
+      <PillsScroller
+        pillsRef={pillsRef}
+        bgColor={tweaks.bgColor}>
+          {allCats.map((cat) =>
+        <div key={cat.id} data-catid={cat.id} style={{ scrollSnapAlign: 'start' }}>
+              <CategoryPill cat={cat} isActive={activeCatId === cat.id} onClick={() => selectCat(cat.id)} />
+            </div>
+        )}
+          <button
+          onClick={() => setShowCreate(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 50,
+            border: '1.5px dashed #333', background: 'transparent',
+            color: '#555', fontFamily: 'DM Sans', fontSize: 15, fontWeight: 600,
+            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+          }}>
+            + Create your own
+          </button>
+        </PillsScroller>
+      }
+
+      {/* Main area */}
+      <div style={{
+        flex: 1,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: activeCat ? 'flex-start' : 'flex-start',
+        paddingTop: activeCat ? 16 : 0,
+        overflow: activeCat ? 'hidden' : 'auto'
+      }}>
+        {!activeCat &&
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          width: '100%', padding: '0 20px',
+          animation: 'slideUp 0.4s ease',
+          gap: 0
+        }}>
+            {/* Hero text */}
+            <div style={{ padding: '20px 0 20px' }}>
+              <p style={{ fontFamily: 'DM Serif Display', fontSize: 26, color: '#1A1A1A', lineHeight: 1.25, marginBottom: 8 }}>
+                For when you don't know<br />what to say.
+              </p>
+              <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#555', lineHeight: 1.5 }}>
+                Pick a topic, swipe, talk.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: '#D8D2C8', marginBottom: 20 }} />
+
+            {/* Category grid */}
+            <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 12,
+            width: '100%'
+          }}>
+              {allCats.map((cat) =>
+            <button
+              key={cat.id}
+              onClick={() => selectCat(cat.id)}
+              style={{
+                background: cat.color,
+                border: 'none',
+                borderRadius: 20,
+                padding: '20px 16px',
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                gap: 8,
+                cursor: 'pointer',
+                textAlign: 'left',
+                minHeight: 110,
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              }}
+              onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.96)'}
+              onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onPointerLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              
+                  <span style={{ fontSize: 28, lineHeight: 1 }}>{cat.emoji}</span>
+                  <span style={{
+                fontFamily: 'DM Sans', fontSize: 14, fontWeight: 700,
+                color: textColor(cat.color), lineHeight: 1.25
+              }}>{cat.label}</span>
+                </button>
+            )}
+
+              {/* Custom tile */}
+              <button
+              onClick={() => setShowCreate(true)}
+              style={{
+                background: 'transparent',
+                border: '1.5px dashed #CCC8C0',
+                borderRadius: 20,
+                padding: '20px 16px',
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                gap: 8,
+                cursor: 'pointer',
+                minHeight: 110,
+                transition: 'transform 0.15s ease'
+              }}
+              onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.96)'}
+              onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onPointerLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+              
+                <span style={{ fontSize: 28, lineHeight: 1, color: '#999' }}>+</span>
+                <span style={{
+                fontFamily: 'DM Sans', fontSize: 14, fontWeight: 700,
+                color: '#999', lineHeight: 1.25
+              }}>Custom</span>
+              </button>
+            </div>
+
+            {/* Bottom divider */}
+            <div style={{ height: 1, background: '#D8D2C8', margin: '20px 0 0' }} />
+
+            {/* Footer */}
+            <div style={{
+            display: 'flex', alignItems: 'center',
+            padding: '20px 0 24px', gap: 16
+          }}>
+              <div style={{ flexShrink: 0, opacity: 0.8 }}>
+                <LandingPeep size={90} opacity={tweaks.doodleOpacity} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontFamily: 'DM Serif Display', fontSize: 15, color: '#1A1A1A', marginBottom: 4, lineHeight: 1.4 }}>
+                  Real conversations,<br />zero awkwardness.
+                </p>
+                <p style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#999', marginTop: 8 }}>
+                  Made with ♥ by <span style={{ color: '#1A1A1A', fontWeight: 600 }}>Shacyz</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+
+        {activeCat && !isEnded &&
+        <CardStack
+          key={activeCatId}
+          category={activeCat.isFavs ? { ...activeCat, questions: favs } : activeCat}
+          favs={favs}
+          onFaveToggle={handleFaveToggle}
+          onEnd={() => setIsEnded(true)} />
+
+        }
+
+        {activeCat && isEnded &&
+        <EndState
+          category={activeCat}
+          onShuffle={handleShuffle}
+          doodleOpacity={tweaks.doodleOpacity} />
+
+        }
+      </div>
+
+      {/* Bottom bar */}
+      <BottomBar onWA={() => setShowToast('wa')} onQRBar={() => setShowToast('qr')} pageUrl={pageUrl} />
+      <div style={{ height: 'env(safe-area-inset-bottom,12px)', minHeight: 12 }} />
+
+      {/* Modals */}
+      {showCreate && <CreateModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+      {showQR && <QRModal onClose={() => setShowQR(false)} />}
+      {showToast === 'wa' &&
+      <ComingSoonToast
+        message="WhatsApp sharing is coming soon. We're working on it!"
+        url={pageUrl}
+        onClose={() => setShowToast(null)} />
+
+      }
+      {showToast === 'qr' &&
+      <ComingSoonToast
+        message="QR code sharing is coming soon. For now, copy the link below!"
+        url={pageUrl}
+        onClose={() => setShowToast(null)} />
+
+      }
+
+      {/* Tweaks Panel */}
+      <TweaksPanel>
+        <TweakSection label="Branding">
+          <TweakText label="App name" value={tweaks.appName} onChange={(v) => setTweak('appName', v)} />
+          <TweakText label="Tagline line 1" value={tweaks.tagline1} onChange={(v) => setTweak('tagline1', v)} />
+          <TweakText label="Tagline line 2" value={tweaks.tagline2} onChange={(v) => setTweak('tagline2', v)} />
+        </TweakSection>
+        <TweakSection label="Doodle">
+          <TweakSlider label="Size" value={tweaks.doodleSize} min={100} max={340} step={10} onChange={(v) => setTweak('doodleSize', v)} />
+          <TweakSlider label="Opacity" value={tweaks.doodleOpacity} min={10} max={100} step={5} onChange={(v) => setTweak('doodleOpacity', v)} />
+        </TweakSection>
+        <TweakSection label="Cards">
+          <TweakSlider label="Corner radius" value={tweaks.cardRadius} min={8} max={48} step={4} onChange={(v) => setTweak('cardRadius', v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>);
+
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+<script>
+// Bootstrap: ensure inline babel scripts run sequentially after Babel is ready.
+// Babel-standalone normally auto-runs text/babel scripts on DOMContentLoaded, but
+// when this file is loaded via a bundler that injects scripts post-load, the auto-run
+// never fires. This catches that case.
+(function bootstrapBabel(){
+  if (typeof Babel === 'undefined') {
+    setTimeout(bootstrapBabel, 50);
+    return;
+  }
+  // If app already mounted, nothing to do.
+  if (document.getElementById('root') && document.getElementById('root').childElementCount > 0) return;
+  // Find unexecuted text/babel scripts and run them in order.
+  const scripts = [...document.querySelectorAll('script[type="text/babel"]')];
+  const pending = scripts.filter(s => !s.dataset.babelRan);
+  for (const s of pending) {
+    s.dataset.babelRan = '1';
+    try {
+      const src = s.textContent;
+      if (!src.trim()) continue;
+      const out = Babel.transform(src, { presets: ['react', 'env'] }).code;
+      const newScript = document.createElement('script');
+      newScript.textContent = out;
+      document.body.appendChild(newScript);
+    } catch (e) {
+      console.error('Babel bootstrap failed:', e);
+    }
+  }
+})();
+</script>
+
+
+</body></html>
